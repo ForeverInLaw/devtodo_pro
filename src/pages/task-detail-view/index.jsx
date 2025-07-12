@@ -12,6 +12,7 @@ const TaskDetailView = () => {
   const navigate = useNavigate();
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const taskId = searchParams.get('id');
 
   useEffect(() => {
@@ -47,9 +48,20 @@ const TaskDetailView = () => {
     console.log('Task updated:', updatedTask);
   };
 
-  const handleTaskDelete = (taskId) => {
-    // In a real app, this would make an API call to delete the task
-    console.log('Task deleted:', taskId);
+  const handleTaskDelete = async () => {
+    if (!taskId) return;
+
+    setIsDeleting(true);
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+
+    if (error) {
+      console.error('Error deleting task:', error);
+      // Handle error appropriately, e.g., show a notification
+    } else {
+      console.log('Task deleted:', taskId);
+      navigate('/task-dashboard');
+    }
+    setIsDeleting(false);
   };
 
   if (loading) {
@@ -77,7 +89,7 @@ const TaskDetailView = () => {
               <p className="text-muted-foreground">The requested task could not be found.</p>
               <button
                 onClick={() => navigate('/task-dashboard')}
-                className="text-primary hover:text-primary/80 transition-micro"
+                className="text-primary hover:text-primary/80 transition-colors"
               >
                 Return to Dashboard
               </button>
@@ -125,6 +137,7 @@ const TaskDetailView = () => {
                 task={task}
                 onTaskUpdate={handleTaskUpdate}
                 onTaskDelete={handleTaskDelete}
+                isDeleting={isDeleting}
               />
             </div>
           </div>

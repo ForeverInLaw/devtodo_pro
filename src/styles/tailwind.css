@@ -109,6 +109,7 @@
 
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
     font-family: 'Inter', sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
@@ -124,16 +125,10 @@
 }
 
 @layer utilities {
-  .transition-smooth {
-    transition: all 250ms ease-out;
-  }
-  
-  .transition-micro {
-    transition: all 150ms ease-out;
-  }
-  
-  .transition-significant {
-    transition: all 400ms ease-out;
+  .transition-colors {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
   }
   
   .elevation-1 {

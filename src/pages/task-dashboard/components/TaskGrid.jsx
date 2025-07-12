@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import TaskCard from './TaskCard';
 import Icon from '../../../components/AppIcon';
 
-const TaskGrid = ({ 
-  tasks, 
-  viewMode, 
-  onEditTask, 
-  onDeleteTask, 
+const TaskGrid = ({
+  tasks,
+  viewMode,
+  onEditTask,
+  onDeleteTask,
   onToggleComplete,
   onTaskReorder,
+  onTaskDragOver,
+  onDragStart,
+  onDragEnd,
   searchQuery,
-  className = "" 
+  isLoading,
+  className = ""
 }) => {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -28,15 +33,27 @@ const TaskGrid = ({
 
   const handleDragStart = (taskId) => {
     setDraggedTaskId(taskId);
+    if (onDragStart) {
+      onDragStart();
+    }
   };
 
   const handleDragEnd = () => {
     setDraggedTaskId(null);
     setDragOverIndex(null);
+    if (onDragEnd) {
+      onDragEnd();
+    }
   };
 
   const handleDragOver = (e, index) => {
     e.preventDefault();
+    if (draggedTaskId) {
+      const draggedIndex = tasks.findIndex(task => task.id === draggedTaskId);
+      if (draggedIndex !== index) {
+        onTaskDragOver(draggedIndex, index);
+      }
+    }
     setDragOverIndex(index);
   };
 
@@ -69,6 +86,14 @@ const TaskGrid = ({
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Icon name="Loader" className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
+
   if (tasks.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center py-16 ${className}`}>
@@ -77,7 +102,7 @@ const TaskGrid = ({
         </div>
         <h3 className="text-lg font-semibold text-foreground mb-2">No tasks found</h3>
         <p className="text-muted-foreground text-center max-w-md">
-          {searchQuery 
+          {searchQuery
             ? `No tasks match your search for "${searchQuery}". Try adjusting your search terms or filters.`
             : "You don't have any tasks yet. Create your first task to get started with your productivity journey."
           }
@@ -189,33 +214,40 @@ const TaskGrid = ({
   }
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}>
-      {tasks.map((task, index) => (
-        <div
-          key={task.id}
-          onDragOver={(e) => handleDragOver(e, index)}
-          onDrop={(e) => handleDrop(e, index)}
-          className={`
-            transition-all duration-200
-            ${dragOverIndex === index ? 'scale-105' : ''}
-          `}
-        >
-          <TaskCard
-            task={{
-              ...task,
-              title: highlightSearchTerm(task.title, searchQuery),
-              description: task.description ? highlightSearchTerm(task.description, searchQuery) : task.description
-            }}
-            onEdit={onEditTask}
-            onDelete={onDeleteTask}
-            onToggleComplete={onToggleComplete}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            isDragging={draggedTaskId === task.id}
-          />
-        </div>
-      ))}
-    </div>
+    <motion.div layout className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}>
+      <AnimatePresence>
+        {tasks.map((task, index) => (
+          <motion.div
+            key={task.id}
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDrop={(e) => handleDrop(e, index)}
+            className={`
+              transition-all duration-200
+              ${dragOverIndex === index ? 'scale-105' : ''}
+            `}
+          >
+            <TaskCard
+              task={{
+                ...task,
+                title: highlightSearchTerm(task.title, searchQuery),
+                description: task.description ? highlightSearchTerm(task.description, searchQuery) : task.description
+              }}
+              onEdit={onEditTask}
+              onDelete={onDeleteTask}
+              onToggleComplete={onToggleComplete}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              isDragging={draggedTaskId === task.id}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

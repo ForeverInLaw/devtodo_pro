@@ -76,6 +76,9 @@ const HeaderNavigation = () => {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+    if (!isMobileMenuOpen) {
+      setIsSearchExpanded(false);
+    }
   };
 
   const isActiveRoute = (path) => {
@@ -90,7 +93,7 @@ const HeaderNavigation = () => {
           <div className="flex items-center">
             <button
               onClick={handleLogoClick}
-              className="flex items-center space-x-3 transition-micro hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md p-1"
+              className="flex items-center space-x-3 transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md p-1"
               aria-label="DevTodo Pro - Go to dashboard"
             >
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -120,7 +123,7 @@ const HeaderNavigation = () => {
               variant={isSettingsPanelOpen ? 'secondary' : 'ghost'}
               size="icon"
               onClick={handleSettingsClick}
-              className="transition-micro"
+              className="transition-colors"
               aria-label="Settings"
             >
               <Icon name="Settings" size={20} />
@@ -132,8 +135,13 @@ const HeaderNavigation = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsSearchExpanded(!isSearchExpanded)}
-              className="transition-micro"
+              onClick={() => {
+                setIsSearchExpanded(!isSearchExpanded);
+                if (!isSearchExpanded) {
+                  setIsMobileMenuOpen(false);
+                }
+              }}
+              className="transition-colors"
               aria-label="Search"
             >
               <Icon name="Search" size={20} />
@@ -145,7 +153,7 @@ const HeaderNavigation = () => {
               variant="ghost"
               size="icon"
               onClick={toggleMobileMenu}
-              className="transition-micro"
+              className="transition-colors"
               aria-label="Menu"
             >
               <Icon name={isMobileMenuOpen ? "X" : "Menu"} size={20} />
@@ -155,7 +163,7 @@ const HeaderNavigation = () => {
 
         {/* Mobile Search Overlay */}
         {isSearchExpanded && (
-          <div className="md:hidden bg-background border-t border-border p-4 animate-slide-in">
+          <div className="md:hidden bg-background border-t border-border p-4 animate-menu-down">
             <SearchBar
               placeholder="Search tasks, projects, or tags..."
               value={searchQuery}
@@ -168,7 +176,7 @@ const HeaderNavigation = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-background border-t border-border animate-slide-in">
+          <div className="md:hidden bg-background border-t border-border animate-menu-down">
             <nav className="p-4 space-y-2">
               <Button
                 variant={isActiveRoute('/task-dashboard') ? 'secondary' : 'ghost'}

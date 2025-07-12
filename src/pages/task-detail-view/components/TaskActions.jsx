@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import Button from '../../../components/ui/Button';
 
-const TaskActions = ({ task, onTaskUpdate, onTaskDelete }) => {
+const TaskActions = ({ task, onTaskUpdate, onTaskDelete, isDeleting }) => {
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -27,17 +27,16 @@ const TaskActions = ({ task, onTaskUpdate, onTaskDelete }) => {
   };
 
   const handleEditTask = () => {
-    navigate('/task-creation-modal', { 
-      state: { 
-        editMode: true, 
-        taskData: task 
-      } 
+    navigate('/task-creation-modal', {
+      state: {
+        editMode: true,
+        taskData: task
+      }
     });
   };
 
   const handleDeleteTask = () => {
-    onTaskDelete(task.id);
-    navigate('/task-dashboard');
+    onTaskDelete();
   };
 
   const handleDuplicateTask = async () => {
@@ -138,6 +137,7 @@ const TaskActions = ({ task, onTaskUpdate, onTaskDelete }) => {
                 onClick={handleDeleteTask}
                 iconName="Trash2"
                 iconPosition="left"
+                loading={isDeleting}
               >
                 Delete
               </Button>

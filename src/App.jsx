@@ -1,10 +1,12 @@
 import { AuthProvider } from './contexts/AuthContext';
-import Routes from './Routes';
+import AppRouter from './Routes';
+import { Toaster } from 'sonner';
 
 function App() {
   return (
     <AuthProvider>
-      <Routes />
+      <AppRouter />
+      <Toaster richColors />
     </AuthProvider>
   );
 }

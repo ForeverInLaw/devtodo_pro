@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import HeaderNavigation, { ThemeProvider } from '../../components/ui/HeaderNavigation';
+import { motion } from 'framer-motion';
 import FloatingActionButton from '../../components/ui/FloatingActionButton';
 import TaskFilters from './components/TaskFilters';
 import TaskToolbar from './components/TaskToolbar';
@@ -17,6 +17,7 @@ const TaskDashboard = () => {
 
   // State management
   const [tasks, setTasks] = useState([]);
+  const [selectedProject, setSelectedProject] = useState(null);
   const [filters, setFilters] = useState({
     categories: [],
     priorities: [],
@@ -24,29 +25,37 @@ const TaskDashboard = () => {
     dateRange: 'all'
   });
   const [viewMode, setViewMode] = useState('grid');
-  const [sortBy, setSortBy] = useState('priority');
+  const [sortBy, setSortBy] = useState('position');
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isTasksLoading, setIsTasksLoading] = useState(false);
 
   // Fetch tasks from Supabase
   useEffect(() => {
     const fetchTasks = async () => {
-      if (user) {
+      if (user && selectedProject) {
+        setIsTasksLoading(true);
         const { data, error } = await supabase
           .from('tasks')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .eq('project_id', selectedProject)
+          .order('position');
         if (error) {
           console.error('Error fetching tasks:', error);
+          setTasks([]);
         } else {
           setTasks(data);
         }
+        setIsTasksLoading(false);
+      } else {
+        setTasks([]);
       }
     };
     fetchTasks();
-  }, [user]);
+  }, [user, selectedProject]);
 
   // Handle search query changes from URL
   useEffect(() => {
@@ -66,10 +75,12 @@ const TaskDashboard = () => {
     const savedViewMode = localStorage.getItem('taskDashboard_viewMode');
     const savedSortBy = localStorage.getItem('taskDashboard_sortBy');
     const savedFiltersCollapsed = localStorage.getItem('taskDashboard_filtersCollapsed');
+    const savedProject = localStorage.getItem('taskDashboard_selectedProject');
 
     if (savedViewMode) setViewMode(savedViewMode);
     if (savedSortBy) setSortBy(savedSortBy);
     if (savedFiltersCollapsed) setIsFiltersCollapsed(JSON.parse(savedFiltersCollapsed));
+    if (savedProject) setSelectedProject(savedProject);
   }, []);
 
   // Save preferences
@@ -84,6 +95,14 @@ const TaskDashboard = () => {
   useEffect(() => {
     localStorage.setItem('taskDashboard_filtersCollapsed', JSON.stringify(isFiltersCollapsed));
   }, [isFiltersCollapsed]);
+
+  useEffect(() => {
+    if (selectedProject) {
+      localStorage.setItem('taskDashboard_selectedProject', selectedProject);
+    } else {
+      localStorage.removeItem('taskDashboard_selectedProject');
+    }
+  }, [selectedProject]);
 
   // Filter and sort tasks
   const filteredAndSortedTasks = useMemo(() => {
@@ -150,26 +169,30 @@ const TaskDashboard = () => {
     }
 
     // Sort tasks
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'priority':
-          const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-          return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-        case 'due_date':
-          if (!a.due_date && !b.due_date) return 0;
-          if (!a.due_date) return 1;
-          if (!b.due_date) return -1;
-          return new Date(a.due_date) - new Date(b.due_date);
-        case 'title':
-          return a.title.localeCompare(b.title);
-        case 'created':
-          return new Date(b.createdAt) - new Date(a.createdAt);
-        case 'category':
-          return a.category.localeCompare(b.category);
-        default:
-          return 0;
-      }
-    });
+    if (sortBy !== 'custom') {
+      filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'position':
+            return (a.position || 0) - (b.position || 0);
+          case 'priority':
+            const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+            return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+          case 'due_date':
+            if (!a.due_date && !b.due_date) return 0;
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return new Date(a.due_date) - new Date(b.due_date);
+          case 'title':
+            return a.title.localeCompare(b.title);
+          case 'created':
+            return new Date(b.created_at) - new Date(a.created_at);
+          case 'category':
+            return a.category.localeCompare(b.category);
+          default:
+            return 0;
+        }
+      });
+    }
 
     return filtered;
   }, [tasks, filters, sortBy, searchQuery]);
@@ -210,16 +233,49 @@ const TaskDashboard = () => {
     }
   };
 
-  const handleTaskReorder = (fromIndex, toIndex) => {
-    const newTasks = [...filteredAndSortedTasks];
-    const [movedTask] = newTasks.splice(fromIndex, 1);
-    newTasks.splice(toIndex, 0, movedTask);
-    setTasks(newTasks);
+  const handleTaskReorder = async (fromIndex, toIndex) => {
+    const reorderedTasks = [...filteredAndSortedTasks];
+    const updates = reorderedTasks.map((task, index) => ({
+      id: task.id,
+      position: index
+    }));
+
+    const { error } = await supabase.rpc('update_task_positions', { updates });
+
+    if (error) {
+      console.error('Error updating task positions:', error);
+      // Optionally, revert the local state if the update fails
+    }
+  };
+
+  const handleTaskDragOver = (fromIndex, toIndex) => {
+    const reorderedTasks = [...filteredAndSortedTasks];
+    const [movedItem] = reorderedTasks.splice(fromIndex, 1);
+    reorderedTasks.splice(toIndex, 0, movedItem);
+
+    const tasksMap = new Map(tasks.map(t => [t.id, t]));
+    const newTasks = reorderedTasks.map(t => tasksMap.get(t.id));
+    const filteredOutTasks = tasks.filter(t => !reorderedTasks.find(rt => rt.id === t.id));
+    
+    setTasks([...newTasks, ...filteredOutTasks]);
+  };
+
+  const handleDragStart = () => {
+    setSortBy('custom');
+  };
+
+  const handleDragEnd = () => {
+    handleTaskReorder(0, 0); // Trigger reorder persistence
   };
 
   const handleAddTask = () => {
     setEditingTask(null);
-    setIsModalOpen(true);
+    if (selectedProject) {
+      setIsModalOpen(true);
+    } else {
+      // You might want to use a more user-friendly notification here
+      alert('Please select a project before adding a task.');
+    }
   };
 
   const handleModalSubmit = async (taskData) => {
@@ -239,7 +295,7 @@ const TaskDashboard = () => {
       // Create new task
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{ ...taskData, user_id: user.id }])
+        .insert([{ ...taskData, user_id: user.id, project_id: selectedProject, position: tasks.length }])
         .select();
       if (error) {
         console.error('Error creating task:', error);
@@ -256,11 +312,14 @@ const TaskDashboard = () => {
   const completedTasks = filteredAndSortedTasks.filter(task => task.completed).length;
 
   return (
-    <ThemeProvider>
-      <div className="min-h-screen bg-background">
-        <HeaderNavigation />
-        
-        <div className="fixed top-16 bottom-0 left-0 right-0 flex">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen bg-background pt-16" // pt-16 to offset for fixed header
+    >
+      <div className="flex h-full">
           {/* Sidebar Filters */}
           <TaskFilters
             filters={filters}
@@ -268,13 +327,13 @@ const TaskDashboard = () => {
             isCollapsed={isFiltersCollapsed}
             onToggleCollapse={() => setIsFiltersCollapsed(!isFiltersCollapsed)}
             tasks={tasks}
-            className="flex-shrink-0 hidden md:block"
+            className="flex-shrink-0 hidden md:block h-full"
             isMobileOpen={isMobileFiltersOpen}
             onMobileClose={() => setIsMobileFiltersOpen(false)}
           />
 
           {/* Main Content */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col min-w-0 h-full">
             <TaskToolbar
               viewMode={viewMode}
               onViewModeChange={setViewMode}
@@ -285,6 +344,9 @@ const TaskDashboard = () => {
               onAddTask={handleAddTask}
               searchQuery={searchQuery}
               onOpenMobileFilters={() => setIsMobileFiltersOpen(true)}
+              selectedProject={selectedProject}
+              onProjectChange={setSelectedProject}
+              isLoading={isTasksLoading}
             />
 
             <div className="p-4 md:p-6 flex-1 overflow-y-auto">
@@ -296,7 +358,11 @@ const TaskDashboard = () => {
                   onDeleteTask={handleDeleteTask}
                   onToggleComplete={handleToggleComplete}
                   onTaskReorder={handleTaskReorder}
+                  onTaskDragOver={handleTaskDragOver}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
                   searchQuery={searchQuery}
+                  isLoading={isTasksLoading}
                 />
               </div>
             </div>
@@ -304,7 +370,7 @@ const TaskDashboard = () => {
         </div>
 
         {/* Floating Action Button */}
-        <FloatingActionButton onClick={handleAddTask} />
+        <FloatingActionButton onClick={handleAddTask} disabled={!selectedProject} />
 
         {/* Task Creation/Editing Modal */}
         {isModalOpen && (
@@ -315,8 +381,7 @@ const TaskDashboard = () => {
             initialData={editingTask}
           />
         )}
-      </div>
-    </ThemeProvider>
+    </motion.div>
   );
 };
 

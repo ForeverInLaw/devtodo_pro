@@ -129,6 +129,9 @@ const TaskCard = ({
               flex items-center space-x-1 transition-all duration-200
               ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'}
             `}>
+              <div className="cursor-move text-muted-foreground w-8 h-8 flex items-center justify-center" title="Drag to reorder">
+                <Icon name="GripVertical" size={16} />
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -191,13 +194,7 @@ const TaskCard = ({
             )}
           </div>
 
-          {/* Drag Handle */}
-          <div className={`
-            absolute top-2 right-2 text-muted-foreground transition-opacity
-            ${isHovered ? 'opacity-100' : 'opacity-0'}
-          `}>
-            <Icon name="GripVertical" size={16} />
-          </div>
+          {/* Drag Handle is now part of Quick Actions on hover */}
         </>
       ) : (
         <div className="w-full relative">

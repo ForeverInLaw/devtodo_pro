@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Select from '../../../components/ui/Select';
+import ProjectSelector from '../../../components/ui/ProjectSelector';
+import { supabase } from '../../../lib/supabase';
 
 const TaskToolbar = ({
   viewMode,
@@ -13,8 +17,34 @@ const TaskToolbar = ({
   onAddTask,
   searchQuery,
   onOpenMobileFilters,
+  selectedProject,
+  onProjectChange,
+  isLoading,
   className = ""
 }) => {
+  const navigate = useNavigate();
+  const [projectName, setProjectName] = useState('');
+
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      if (selectedProject) {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('name')
+          .eq('id', selectedProject)
+          .single();
+        if (!error && data) {
+          setProjectName(data.name);
+        }
+      } else {
+        setProjectName('');
+      }
+    };
+    if (!isLoading) {
+      fetchProjectName();
+    }
+  }, [selectedProject, isLoading]);
+
   const sortOptions = [
     { value: 'priority', label: 'Priority' },
     { value: 'dueDate', label: 'Due Date' },
@@ -24,11 +54,31 @@ const TaskToolbar = ({
   ];
 
   const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  
+  const animatedTotalTasks = useSpring(0, { damping: 20, stiffness: 100 });
+  const animatedCompletedTasks = useSpring(0, { damping: 20, stiffness: 100 });
+  const animatedPercentage = useSpring(0, { damping: 20, stiffness: 100 });
+
+  const totalTasksString = useTransform(animatedTotalTasks, v => Math.round(v));
+  const completedTasksString = useTransform(animatedCompletedTasks, v => Math.round(v));
+  const percentageString = useTransform(animatedPercentage, (v) => `${Math.round(v)}%`);
+
+  useEffect(() => {
+    if (!isLoading) {
+      animatedTotalTasks.set(totalTasks);
+      animatedCompletedTasks.set(completedTasks);
+      animatedPercentage.set(completionPercentage);
+    } else {
+      animatedTotalTasks.set(0);
+      animatedCompletedTasks.set(0);
+      animatedPercentage.set(0);
+    }
+  }, [totalTasks, completedTasks, completionPercentage, isLoading, animatedTotalTasks, animatedCompletedTasks, animatedPercentage]);
 
   return (
     <div className={`bg-background border-b border-border ${className}`}>
       <div className="px-4 md:px-6 py-3">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-start gap-4">
           {/* Mobile Filter Button */}
           <div className="md:hidden">
             <Button
@@ -41,31 +91,70 @@ const TaskToolbar = ({
             </Button>
           </div>
 
+          {/* Project Selector */}
+          <div className="hidden md:block">
+            <ProjectSelector selectedProject={selectedProject} onProjectChange={onProjectChange} />
+          </div>
+
+          {/* Mobile Project Button */}
+          <div className="md:hidden">
+            <Button variant="outline" onClick={() => navigate('/projects')} className="min-w-[120px] justify-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={isLoading ? 'loader' : 'content'}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex items-center justify-center"
+                >
+                  {isLoading ? (
+                    <div className="h-5 w-20 bg-muted rounded" />
+                  ) : (
+                    <>
+                      {projectName || 'Projects'}
+                      <Icon name="ChevronDown" size={16} className="ml-2" />
+                    </>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </Button>
+          </div>
+
           {/* Stats */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="truncate">
-                <span className="font-medium text-foreground">{totalTasks}</span> tasks
+          <div className="flex-1 min-w-0 md:ml-4 h-12 flex flex-col justify-center">
+            <div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="truncate min-w-[80px]">
+                  <motion.span className="font-medium text-foreground">
+                    {totalTasksString}
+                  </motion.span>
+                  {' '}tasks
+                </div>
+                <div className="hidden sm:block truncate min-w-[120px]">
+                  <motion.span className="font-medium text-foreground">
+                    {completedTasksString}
+                  </motion.span>
+                  {' '}completed
+                </div>
               </div>
-              <div className="hidden sm:block truncate">
-                <span className="font-medium text-foreground">{completedTasks}</span> completed
+              <div className="flex items-center space-x-2 mt-2">
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-success"
+                    animate={{ width: isLoading ? '0%' : `${completionPercentage}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                </div>
+                <motion.span className="text-sm font-medium text-foreground w-12 text-right">
+                  {percentageString}
+                </motion.span>
               </div>
-            </div>
-            <div className="flex items-center space-x-2 mt-2">
-              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-success transition-all duration-500 ease-out"
-                  style={{ width: `${completionPercentage}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium text-foreground w-12 text-right">
-                {completionPercentage}%
-              </span>
             </div>
           </div>
 
           {/* Right side actions */}
-          <div className="flex items-center space-x-2 md:space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4 ml-auto">
             {/* Sort Options */}
             <div className="hidden md:flex items-center space-x-2">
               <span className="text-sm text-muted-foreground">Sort by:</span>

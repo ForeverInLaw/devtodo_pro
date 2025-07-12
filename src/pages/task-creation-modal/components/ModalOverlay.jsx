@@ -108,7 +108,7 @@ const ModalOverlay = ({ isOpen, onClose, title, children, className = "" }) => {
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="transition-micro hover:bg-muted"
+                className="transition-colors hover:bg-muted"
                 aria-label="Close modal"
               >
                 <Icon name="X" size={20} />

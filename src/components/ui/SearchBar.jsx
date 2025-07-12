@@ -110,7 +110,7 @@ const SearchBar = ({
         {value && (
           <button
             onClick={clearSearch}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-micro"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Clear search"
           >
             <Icon name="X" size={16} />
@@ -128,7 +128,7 @@ const SearchBar = ({
             <button
               key={result.id || index}
               onClick={() => handleResultClick(result)}
-              className="w-full px-4 py-3 text-left hover:bg-muted transition-micro border-b border-border last:border-b-0 focus:outline-none focus:bg-muted"
+              className="w-full px-4 py-3 text-left hover:bg-muted transition-colors border-b border-border last:border-b-0 focus:outline-none focus:bg-muted"
             >
               <div className="flex items-center space-x-3">
                 {result.icon && (

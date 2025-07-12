@@ -1,10 +1,13 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
 import TaskDashboard from './pages/task-dashboard';
 import LoginForm from './pages/login';
 import NotFound from './pages/NotFound';
 import SignUpForm from './pages/signup';
 import TaskDetailView from './pages/task-detail-view';
+import ProjectManagementPage from './pages/project-management';
+import HeaderNavigation, { ThemeProvider } from './components/ui/HeaderNavigation';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -18,12 +21,18 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const ProjectRoutes = () => {
+  const location = useLocation();
+  const noHeaderPaths = ['/login', '/signup'];
+  const showHeader = !noHeaderPaths.includes(location.pathname);
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/signup" element={<SignUpForm />} />
-        <Route path="/login" element={<LoginForm />} />
-        <Route
+    <ThemeProvider>
+      {showHeader && <HeaderNavigation />}
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/signup" element={<SignUpForm />} />
+          <Route path="/login" element={<LoginForm />} />
+          <Route
           path="/task-dashboard"
           element={
             <ProtectedRoute>
@@ -39,11 +48,26 @@ const ProjectRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute>
+              <ProjectManagementPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/" element={<Navigate to="/task-dashboard" replace />} />
         <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+        </Routes>
+      </AnimatePresence>
+    </ThemeProvider>
   );
 };
 
-export default ProjectRoutes;
+const AppRouter = () => (
+  <Router>
+    <ProjectRoutes />
+  </Router>
+);
+
+export default AppRouter;

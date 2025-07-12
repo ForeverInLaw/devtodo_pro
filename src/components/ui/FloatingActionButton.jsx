@@ -6,7 +6,8 @@ import Button from './Button';
 const FloatingActionButton = ({ 
   onClick,
   className = "",
-  ariaLabel = "Create new task"
+  ariaLabel = "Create new task",
+  disabled = false
 }) => {
   const navigate = useNavigate();
   const [isPressed, setIsPressed] = useState(false);
@@ -37,6 +38,7 @@ const FloatingActionButton = ({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onMouseDown={() => setIsPressed(true)}
+      disabled={disabled}
       onMouseUp={() => setIsPressed(false)}
       onMouseLeave={() => setIsPressed(false)}
       className={`
@@ -49,6 +51,7 @@ const FloatingActionButton = ({
         focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
         active:scale-95
         ${isPressed ? 'scale-95' : 'scale-100'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${className}
       `}
       aria-label={ariaLabel}

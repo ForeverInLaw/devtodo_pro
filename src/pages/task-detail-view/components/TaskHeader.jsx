@@ -48,7 +48,7 @@ const TaskHeader = ({ task, onTaskUpdate, onTaskDelete }) => {
       <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
         <button
           onClick={() => navigate('/task-dashboard')}
-          className="hover:text-foreground transition-micro flex items-center space-x-1"
+          className="hover:text-foreground transition-colors flex items-center space-x-1"
         >
           <Icon name="ArrowLeft" size={16} />
           <span>Dashboard</span>
@@ -95,7 +95,7 @@ const TaskHeader = ({ task, onTaskUpdate, onTaskDelete }) => {
               variant="ghost"
               size="icon"
               onClick={handleTitleEdit}
-              className="opacity-0 group-hover:opacity-100 transition-micro"
+              className="opacity-0 group-hover:opacity-100 transition-colors"
             >
               <Icon name="Edit2" size={16} />
             </Button>
