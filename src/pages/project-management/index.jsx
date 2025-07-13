@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Icon from '../../components/AppIcon';
 import { toast } from 'sonner';
+import MemberManager from './components/MemberManager';
 
 const ProjectManagementPage = () => {
   const { user } = useAuth();
@@ -15,6 +16,7 @@ const ProjectManagementPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [editingProject, setEditingProject] = useState(null); // { id, name }
   const [newProjectName, setNewProjectName] = useState('');
+  const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -22,8 +24,7 @@ const ProjectManagementPage = () => {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('projects')
-        .select('id, name')
-        .eq('user_id', user.id)
+        .select('id, name, owner_id, project_members(role)')
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -44,15 +45,21 @@ const ProjectManagementPage = () => {
 
   const handleCreateProject = async () => {
     if (newProjectName.trim() === '') return;
-    const { data, error } = await supabase
-      .from('projects')
-      .insert({ name: newProjectName, user_id: user.id })
-      .select();
+    const { data, error } = await supabase.rpc('create_project_and_add_owner', {
+      name: newProjectName,
+    });
 
     if (error) {
       toast.error('Failed to create project.');
     } else {
-      setProjects([...projects, data[0]]);
+      // Refetch projects to get the new one
+      const { data: newProjects, error: fetchError } = await supabase
+        .from('projects')
+        .select('id, name, owner_id, project_members(role)')
+        .order('created_at', { ascending: true });
+      if (!fetchError) {
+        setProjects(newProjects);
+      }
       toast.success('Project created.');
       setNewProjectName('');
     }
@@ -152,12 +159,17 @@ const ProjectManagementPage = () => {
                         className="flex-grow"
                       />
                     ) : (
-                      <span
-                        className="font-semibold cursor-pointer hover:text-primary"
-                        onClick={() => handleSelectProject(project.id)}
-                      >
-                        {project.name}
-                      </span>
+                      <div className="flex-grow">
+                        <span
+                          className="font-semibold cursor-pointer hover:text-primary"
+                          onClick={() => handleSelectProject(project.id)}
+                        >
+                          {project.name}
+                        </span>
+                        <div className="text-xs text-muted-foreground">
+                          Role: {project.project_members[0]?.role || 'N/A'}
+                        </div>
+                      </div>
                     )}
                     <div className="flex gap-2">
                       {editingProject?.id === project.id ? (
@@ -167,20 +179,30 @@ const ProjectManagementPage = () => {
                         </>
                       ) : (
                         <>
-                          <Button size="icon" variant="ghost" onClick={() => setEditingProject({ id: project.id, name: project.name })}>
-                            <Icon name="Edit2" size={16} />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="text-error" onClick={() => handleDeleteProject(project.id)}>
-                            <Icon name="Trash2" size={16} />
-                          </Button>
+                          {project.project_members[0]?.role === 'admin' && (
+                            <Button size="icon" variant="ghost" onClick={() => setEditingProject({ id: project.id, name: project.name })}>
+                              <Icon name="Edit2" size={16} />
+                            </Button>
+                          )}
+                          {project.owner_id === user.id && (
+                            <Button size="icon" variant="ghost" className="text-error" onClick={() => handleDeleteProject(project.id)}>
+                              <Icon name="Trash2" size={16} />
+                            </Button>
+                          )}
                         </>
                       )}
+                       <Button size="icon" variant="ghost" onClick={() => setSelectedProject(selectedProject?.id === project.id ? null : project)}>
+                        <Icon name="Users" size={16} />
+                      </Button>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
             )}
           </div>
+          {selectedProject && (
+            <MemberManager project={selectedProject} user={user} />
+          )}
       </div>
     </motion.div>
   );

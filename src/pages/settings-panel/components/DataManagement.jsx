@@ -25,8 +25,7 @@ const DataManagement = () => {
 
       const { data, error, count } = await supabase
         .from('tasks')
-        .select('id, completed', { count: 'exact', head: false })
-        .eq('user_id', user.id);
+        .select('id, completed', { count: 'exact', head: false });
 
       if (error) {
         console.error('Error fetching task stats:', error);
@@ -61,8 +60,7 @@ const DataManagement = () => {
       // Fetch all tasks from Supabase
       const { data: tasks, error } = await supabase
         .from('tasks')
-        .select('*')
-        .eq('user_id', user.id);
+        .select('*');
 
       if (error) {
         throw error;
@@ -112,7 +110,6 @@ const DataManagement = () => {
       const { error } = await supabase
         .from('tasks')
         .delete()
-        .eq('user_id', user.id)
         .eq('completed', true);
 
       if (error) throw error;
@@ -120,8 +117,7 @@ const DataManagement = () => {
       // Refetch stats after clearing
       const { data, count } = await supabase
         .from('tasks')
-        .select('id, completed', { count: 'exact', head: false })
-        .eq('user_id', user.id);
+        .select('id, completed', { count: 'exact', head: false });
 
       const completedCount = data.filter(task => task.completed).length;
       const totalCount = count || data.length;
@@ -159,21 +155,19 @@ const DataManagement = () => {
           // Get user's projects
           let { data: projects, error: projectsError } = await supabase
             .from('projects')
-            .select('id')
-            .eq('user_id', user.id);
+            .select('id');
 
           if (projectsError) throw projectsError;
 
           let defaultProjectId;
           if (projects.length === 0) {
             // Create a default project if none exist
-            const { data: newProject, error: newProjectError } = await supabase
-              .from('projects')
-              .insert({ name: 'Imported Project', user_id: user.id })
-              .select('id')
-              .single();
-            if (newProjectError) throw newProjectError;
-            defaultProjectId = newProject.id;
+            const { data: newProjectId, error: rpcError } = await supabase.rpc(
+              'create_project_and_add_owner',
+              { name: 'Imported Project' }
+            );
+            if (rpcError) throw rpcError;
+            defaultProjectId = newProjectId;
             projects = [{ id: defaultProjectId }];
           } else {
             defaultProjectId = projects[0].id;
@@ -184,7 +178,6 @@ const DataManagement = () => {
           // Restore tasks to Supabase, ensuring only valid columns are inserted
           const tasksToInsert = importData.tasks.map((task, index) => {
             const sanitizedTask = {
-              user_id: user.id,
               project_id: validProjectIds.has(task.project_id) ? task.project_id : defaultProjectId,
               title: task.title,
               description: task.description,
@@ -397,8 +390,17 @@ const DataManagement = () => {
                 if (window.confirm('Are you absolutely sure? All tasks and settings will be lost forever!')) {
                   try {
                     // Delete all tasks from Supabase
-                    const { error } = await supabase.from('tasks').delete().eq('user_id', user.id);
-                    if (error) throw error;
+                    const { data: ownedProjects, error: projectsError } = await supabase
+                      .from('projects')
+                      .select('id')
+                      .eq('owner_id', user.id);
+                    if (projectsError) throw projectsError;
+
+                    const projectIds = ownedProjects.map(p => p.id);
+                    if (projectIds.length > 0) {
+                      const { error: deleteError } = await supabase.from('projects').delete().in('id', projectIds);
+                      if (deleteError) throw deleteError;
+                    }
 
                     // Clear all localStorage
                     localStorage.clear();

@@ -14,6 +14,23 @@ A modern task management application built with React, Vite, Tailwind CSS, and S
 - **Animations**: **Framer Motion** for creating smooth and beautiful UI animations.
 - **UI Components**: A rich set of reusable components, including custom UI elements built with Radix UI primitives.
 - **Data Visualization**: Integrated **D3.js** and **Recharts** for powerful data visualization capabilities.
+- **Real-time Collaboration**: Invite users to projects, manage roles, and see live updates.
+
+## ✨ Changelog
+
+### Version 0.2.0 (2025-07-13)
+
+- **Feature: Real-time Collaboration**
+  - Users can now create projects and invite other users to collaborate.
+  - Implemented a role-based access control system with 'admin', 'editor', and 'viewer' roles.
+  - The task dashboard now updates in real-time for all project members.
+- **Database:**
+  - Added `project_members` and `invitations` tables to manage collaboration.
+  - Updated all RLS policies to support multi-user projects.
+  - Added several RPC functions to handle project creation, invitations, and member management securely.
+- **UI/UX:**
+  - Added a new project management page to invite and manage members.
+  - Updated the task dashboard and project selector to reflect the new data model.
 
 ## 📋 Prerequisites
 

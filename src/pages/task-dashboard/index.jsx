@@ -40,7 +40,6 @@ const TaskDashboard = () => {
         const { data, error } = await supabase
           .from('tasks')
           .select('*')
-          .eq('user_id', user.id)
           .eq('project_id', selectedProject)
           .order('position');
         if (error) {
@@ -56,6 +55,28 @@ const TaskDashboard = () => {
     };
     fetchTasks();
   }, [user, selectedProject]);
+
+  // Set up real-time subscription for tasks
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    const channel = supabase
+      .channel(`tasks-project-${selectedProject}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${selectedProject}` }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setTasks(currentTasks => [...currentTasks, payload.new]);
+        } else if (payload.eventType === 'UPDATE') {
+          setTasks(currentTasks => currentTasks.map(task => task.id === payload.new.id ? payload.new : task));
+        } else if (payload.eventType === 'DELETE') {
+          setTasks(currentTasks => currentTasks.filter(task => task.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedProject]);
 
   // Handle search query changes from URL
   useEffect(() => {
@@ -295,7 +316,7 @@ const TaskDashboard = () => {
       // Create new task
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{ ...taskData, user_id: user.id, project_id: selectedProject, position: tasks.length }])
+        .insert([{ ...taskData, project_id: selectedProject, position: tasks.length }])
         .select();
       if (error) {
         console.error('Error creating task:', error);
