@@ -14,7 +14,10 @@ export const AuthProvider = ({ children }) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
-          const { error } = await supabase.rpc('accept_all_pending_invitations');
+          const { error } = await supabase.rpc('accept_all_pending_invitations', {
+            u_id: currentUser.id,
+            u_email: currentUser.email,
+          });
           if (error) {
             console.error('Error accepting invitations:', error);
           }

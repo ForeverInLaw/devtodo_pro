@@ -35,11 +35,12 @@ const MemberManager = ({ project, user }) => {
   }, [project]);
 
   const handleInviteMember = async () => {
-    if (newMemberEmail.trim() === '') return;
+    const email = newMemberEmail.trim().toLowerCase();
+    if (email === '') return;
 
     const { error } = await supabase.from('invitations').insert({
       project_id: project.id,
-      email: newMemberEmail,
+      email: email,
       role: newMemberRole,
     });
 

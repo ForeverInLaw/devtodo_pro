@@ -20,30 +20,10 @@ const TaskToolbar = ({
   selectedProject,
   onProjectChange,
   isLoading,
+  projectName,
   className = ""
 }) => {
   const navigate = useNavigate();
-  const [projectName, setProjectName] = useState('');
-
-  useEffect(() => {
-    const fetchProjectName = async () => {
-      if (selectedProject) {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('name')
-          .eq('id', selectedProject)
-          .single();
-        if (!error && data) {
-          setProjectName(data.name);
-        }
-      } else {
-        setProjectName('');
-      }
-    };
-    if (!isLoading) {
-      fetchProjectName();
-    }
-  }, [selectedProject, isLoading]);
 
   const sortOptions = [
     { value: 'priority', label: 'Priority' },

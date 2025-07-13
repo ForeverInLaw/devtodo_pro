@@ -17,6 +17,7 @@ const TaskDashboard = () => {
 
   // State management
   const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [filters, setFilters] = useState({
     categories: [],
@@ -34,26 +35,47 @@ const TaskDashboard = () => {
 
   // Fetch tasks from Supabase
   useEffect(() => {
-    const fetchTasks = async () => {
-      if (user && selectedProject) {
+    const fetchProjectsAndTasks = async () => {
+      if (user) {
         setIsTasksLoading(true);
-        const { data, error } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('project_id', selectedProject)
-          .order('position');
-        if (error) {
-          console.error('Error fetching tasks:', error);
-          setTasks([]);
+        // Fetch projects first
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('id, name');
+        
+        if (projectError) {
+          console.error('Error fetching projects:', projectError);
+          setProjects([]);
         } else {
-          setTasks(data);
+          setProjects(projectData);
+          const currentSelectedProject = localStorage.getItem('taskDashboard_selectedProject');
+          if (currentSelectedProject && projectData.some(p => p.id === currentSelectedProject)) {
+            setSelectedProject(currentSelectedProject);
+          } else if (projectData.length > 0) {
+            setSelectedProject(projectData[0].id);
+          }
+        }
+
+        // Then fetch tasks for the selected project
+        if (selectedProject) {
+          const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('project_id', selectedProject)
+            .order('position');
+          if (error) {
+            console.error('Error fetching tasks:', error);
+            setTasks([]);
+          } else {
+            setTasks(data);
+          }
+        } else {
+          setTasks([]);
         }
         setIsTasksLoading(false);
-      } else {
-        setTasks([]);
       }
     };
-    fetchTasks();
+    fetchProjectsAndTasks();
   }, [user, selectedProject]);
 
   // Set up real-time subscription for tasks
@@ -368,6 +390,7 @@ const TaskDashboard = () => {
               selectedProject={selectedProject}
               onProjectChange={setSelectedProject}
               isLoading={isTasksLoading}
+              projectName={projects.find(p => p.id === selectedProject)?.name || ''}
             />
 
             <div className="p-4 md:p-6 flex-1 overflow-y-auto">
