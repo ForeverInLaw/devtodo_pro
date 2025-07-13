@@ -167,7 +167,7 @@ const ProjectManagementPage = () => {
                           {project.name}
                         </span>
                         <div className="text-xs text-muted-foreground">
-                          Role: {project.project_members[0]?.role || 'N/A'}
+                          Role: {(project.project_members && project.project_members[0]?.role) || 'N/A'}
                         </div>
                       </div>
                     )}
@@ -179,7 +179,7 @@ const ProjectManagementPage = () => {
                         </>
                       ) : (
                         <>
-                          {project.project_members[0]?.role === 'admin' && (
+                          {(project.project_members && project.project_members[0]?.role === 'admin') && (
                             <Button size="icon" variant="ghost" onClick={() => setEditingProject({ id: project.id, name: project.name })}>
                               <Icon name="Edit2" size={16} />
                             </Button>
