@@ -5,7 +5,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Select from '../../../components/ui/Select';
 import ProjectSelector from '../../../components/ui/ProjectSelector';
-import { supabase } from '../../../lib/supabase';
+import { useProjects } from '../../../contexts/ProjectContext';
 
 const TaskToolbar = ({
   viewMode,
@@ -17,13 +17,12 @@ const TaskToolbar = ({
   onAddTask,
   searchQuery,
   onOpenMobileFilters,
-  selectedProject,
-  onProjectChange,
-  isLoading,
+  isTasksLoading,
   projectName,
   className = ""
 }) => {
   const navigate = useNavigate();
+  const { projects, selectedProject, setSelectedProject, isLoading: isProjectsLoading } = useProjects();
 
   const sortOptions = [
     { value: 'priority', label: 'Priority' },
@@ -44,7 +43,7 @@ const TaskToolbar = ({
   const percentageString = useTransform(animatedPercentage, (v) => `${Math.round(v)}%`);
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isTasksLoading) {
       animatedTotalTasks.set(totalTasks);
       animatedCompletedTasks.set(completedTasks);
       animatedPercentage.set(completionPercentage);
@@ -53,7 +52,7 @@ const TaskToolbar = ({
       animatedCompletedTasks.set(0);
       animatedPercentage.set(0);
     }
-  }, [totalTasks, completedTasks, completionPercentage, isLoading, animatedTotalTasks, animatedCompletedTasks, animatedPercentage]);
+  }, [totalTasks, completedTasks, completionPercentage, isTasksLoading, animatedTotalTasks, animatedCompletedTasks, animatedPercentage]);
 
   return (
     <div className={`bg-background border-b border-border ${className}`}>
@@ -73,7 +72,12 @@ const TaskToolbar = ({
 
           {/* Project Selector */}
           <div className="hidden md:block">
-            <ProjectSelector selectedProject={selectedProject} onProjectChange={onProjectChange} />
+            <ProjectSelector
+              selectedProject={selectedProject}
+              onProjectChange={setSelectedProject}
+              projects={projects}
+              isLoading={isProjectsLoading}
+            />
           </div>
 
           {/* Mobile Project Button */}
@@ -81,14 +85,14 @@ const TaskToolbar = ({
             <Button variant="outline" onClick={() => navigate('/projects')} className="min-w-[120px] justify-center">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={isLoading ? 'loader' : 'content'}
+                  key={isProjectsLoading ? 'loader' : 'content'}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                   className="flex items-center justify-center"
                 >
-                  {isLoading ? (
+                  {isProjectsLoading ? (
                     <div className="h-5 w-20 bg-muted rounded" />
                   ) : (
                     <>
@@ -122,7 +126,7 @@ const TaskToolbar = ({
                 <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-success"
-                    animate={{ width: isLoading ? '0%' : `${completionPercentage}%` }}
+                    animate={{ width: isTasksLoading ? '0%' : `${completionPercentage}%` }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                   />
                 </div>

@@ -8,17 +8,22 @@ import TaskGrid from './components/TaskGrid';
 import TaskCreationModal from '../task-creation-modal';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProjects } from '../../contexts/ProjectContext';
 
 const TaskDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
   const { user } = useAuth();
+  const {
+    projects,
+    selectedProject,
+    setSelectedProject,
+    isLoading: isProjectsLoading
+  } = useProjects();
 
   // State management
   const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null);
   const [filters, setFilters] = useState({
     categories: [],
     priorities: [],
@@ -33,50 +38,32 @@ const TaskDashboard = () => {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isTasksLoading, setIsTasksLoading] = useState(false);
 
-  // Fetch tasks from Supabase
+  // Fetch tasks for the selected project
   useEffect(() => {
-    const fetchProjectsAndTasks = async () => {
-      if (user) {
-        setIsTasksLoading(true);
-        // Fetch projects first
-        const { data: projectData, error: projectError } = await supabase
-          .from('projects')
-          .select('id, name');
-        
-        if (projectError) {
-          console.error('Error fetching projects:', projectError);
-          setProjects([]);
-        } else {
-          setProjects(projectData);
-          const currentSelectedProject = localStorage.getItem('taskDashboard_selectedProject');
-          if (currentSelectedProject && projectData.some(p => p.id === currentSelectedProject)) {
-            setSelectedProject(currentSelectedProject);
-          } else if (projectData.length > 0) {
-            setSelectedProject(projectData[0].id);
-          }
-        }
-
-        // Then fetch tasks for the selected project
-        if (selectedProject) {
-          const { data, error } = await supabase
-            .from('tasks')
-            .select('*')
-            .eq('project_id', selectedProject)
-            .order('position');
-          if (error) {
-            console.error('Error fetching tasks:', error);
-            setTasks([]);
-          } else {
-            setTasks(data);
-          }
-        } else {
-          setTasks([]);
-        }
-        setIsTasksLoading(false);
+    const fetchTasks = async () => {
+      if (!selectedProject) {
+        setTasks([]);
+        return;
       }
+      
+      setIsTasksLoading(true);
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('project_id', selectedProject)
+        .order('position');
+        
+      if (error) {
+        console.error('Error fetching tasks:', error);
+        setTasks([]);
+      } else {
+        setTasks(data);
+      }
+      setIsTasksLoading(false);
     };
-    fetchProjectsAndTasks();
-  }, [user, selectedProject]);
+    
+    fetchTasks();
+  }, [selectedProject]);
 
   // Set up real-time subscription for tasks
   useEffect(() => {
@@ -118,12 +105,10 @@ const TaskDashboard = () => {
     const savedViewMode = localStorage.getItem('taskDashboard_viewMode');
     const savedSortBy = localStorage.getItem('taskDashboard_sortBy');
     const savedFiltersCollapsed = localStorage.getItem('taskDashboard_filtersCollapsed');
-    const savedProject = localStorage.getItem('taskDashboard_selectedProject');
 
     if (savedViewMode) setViewMode(savedViewMode);
     if (savedSortBy) setSortBy(savedSortBy);
     if (savedFiltersCollapsed) setIsFiltersCollapsed(JSON.parse(savedFiltersCollapsed));
-    if (savedProject) setSelectedProject(savedProject);
   }, []);
 
   // Save preferences
@@ -139,13 +124,6 @@ const TaskDashboard = () => {
     localStorage.setItem('taskDashboard_filtersCollapsed', JSON.stringify(isFiltersCollapsed));
   }, [isFiltersCollapsed]);
 
-  useEffect(() => {
-    if (selectedProject) {
-      localStorage.setItem('taskDashboard_selectedProject', selectedProject);
-    } else {
-      localStorage.removeItem('taskDashboard_selectedProject');
-    }
-  }, [selectedProject]);
 
   // Filter and sort tasks
   const filteredAndSortedTasks = useMemo(() => {
@@ -387,9 +365,7 @@ const TaskDashboard = () => {
               onAddTask={handleAddTask}
               searchQuery={searchQuery}
               onOpenMobileFilters={() => setIsMobileFiltersOpen(true)}
-              selectedProject={selectedProject}
-              onProjectChange={setSelectedProject}
-              isLoading={isTasksLoading}
+              isTasksLoading={isTasksLoading}
               projectName={projects.find(p => p.id === selectedProject)?.name || ''}
             />
 

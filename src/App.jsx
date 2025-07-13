@@ -1,4 +1,5 @@
 import { AuthProvider } from './contexts/AuthContext';
+import { ProjectProvider } from './contexts/ProjectContext';
 import AppRouter from './Routes';
 import { Toaster } from 'sonner';
 import './styles/fonts.css';
@@ -8,7 +9,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppRouter />
+        <ProjectProvider>
+          <AppRouter />
+        </ProjectProvider>
         <Toaster richColors />
       </AuthProvider>
     </ThemeProvider>

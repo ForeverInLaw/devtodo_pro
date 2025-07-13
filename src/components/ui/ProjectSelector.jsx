@@ -6,41 +6,18 @@ import Select from './Select';
 import Button from './Button';
 import Input from './Input';
 import { toast } from 'sonner';
+import Icon from '../AppIcon';
 
-const ProjectSelector = ({ selectedProject, onProjectChange }) => {
-  const { user } = useAuth();
+const ProjectSelector = ({
+  selectedProject,
+  onProjectChange,
+  projects,
+  isLoading,
+}) => {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      if (!user) return;
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, name')
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching projects:', error);
-        toast.error('Failed to load projects.');
-      } else {
-        setProjects(data);
-        if (!selectedProject && data.length > 0) {
-          onProjectChange(data[0].id);
-        } else if (data.length === 0) {
-          onProjectChange(null);
-        }
-      }
-      setIsLoading(false);
-    };
-
-    fetchProjects();
-  }, [user]);
 
 
-  const projectOptions = projects.map(p => ({ value: p.id, label: p.name }));
+  const projectOptions = projects ? projects.map(p => ({ value: p.id, label: p.name })) : [];
 
   if (isLoading) {
     return (
@@ -70,7 +47,7 @@ const ProjectSelector = ({ selectedProject, onProjectChange }) => {
         placeholder="Select a project"
       />
       <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigate('/projects')} aria-label="Manage projects">
-        ...
+        <Icon name="Plus" size={16} />
       </Button>
     </div>
   );

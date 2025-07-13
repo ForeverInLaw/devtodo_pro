@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext();
@@ -8,8 +8,10 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const processSession = async (session) => {
-      setLoading(true);
+    const processSession = async (session, isInitialLoad = false) => {
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       try {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
@@ -25,13 +27,15 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error("Error processing session:", error);
       } finally {
-        setLoading(false);
+        if (isInitialLoad) {
+          setLoading(false);
+        }
       }
     };
 
     // Process the session on initial load
     supabase.auth.getSession().then(({ data: { session } }) => {
-      processSession(session);
+      processSession(session, true);
     });
 
     // Listen for subsequent auth changes
@@ -44,13 +48,13 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     signUp: (data) => supabase.auth.signUp(data),
     signIn: (data) => supabase.auth.signInWithPassword(data),
     signOut: () => supabase.auth.signOut(),
     user,
     loading,
-  };
+  }), [user, loading]);
 
   return (
     <AuthContext.Provider value={value}>
