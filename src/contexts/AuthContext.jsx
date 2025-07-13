@@ -8,21 +8,32 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await supabase.rpc('accept_all_pending_invitations');
+    const processSession = async (session) => {
+      setLoading(true);
+      try {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          const { error } = await supabase.rpc('accept_all_pending_invitations');
+          if (error) {
+            console.error('Error accepting invitations:', error);
+          }
+        }
+      } catch (error) {
+        console.error("Error processing session:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    getSession();
+    // Process the session on initial load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      processSession(session);
+    });
 
+    // Listen for subsequent auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      processSession(session);
     });
 
     return () => {
