@@ -7,6 +7,7 @@ import NotificationSettings from './components/NotificationSettings';
 import TaskManagementSettings from './components/TaskManagementSettings';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import DataManagement from './components/DataManagement';
+import AccountSettings from './components/AccountSettings';
 
 const SettingsPanel = ({ isOpen, onClose }) => {
   const [hasChanges, setHasChanges] = useState(false);
@@ -179,6 +180,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
             <TaskManagementSettings />
             <KeyboardShortcuts />
             <DataManagement />
+           <AccountSettings />
           </div>
         </div>
 

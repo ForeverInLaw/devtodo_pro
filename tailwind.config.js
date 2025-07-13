@@ -78,8 +78,8 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ["Geist Sans", "sans-serif"],
+        mono: ["Geist Mono", "monospace"],
       },
       fontSize: {
         xs: [
@@ -239,5 +239,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("tailwind-scrollbar")],
 };

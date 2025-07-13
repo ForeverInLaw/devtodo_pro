@@ -28,8 +28,8 @@ const ModalOverlay = ({ isOpen, onClose, title, children, className = "" }) => {
   }, [isOpen, onClose]);
 
   const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 }
+    hidden: { opacity: 0, backdropFilter: 'blur(0px)' },
+    visible: { opacity: 1, backdropFilter: 'blur(4px)' }
   };
 
   const modalVariants = {
@@ -72,13 +72,10 @@ const ModalOverlay = ({ isOpen, onClose, title, children, className = "" }) => {
           initial="hidden"
           animate="visible"
           exit="hidden"
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-1050 flex items-center justify-center p-4"
-          onClick={handleBackdropClick}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="fixed inset-0 z-1050 flex items-center justify-center p-4 bg-black/50"
+          onMouseDown={handleBackdropClick}
         >
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          
           {/* Modal Content */}
           <motion.div
             variants={modalVariants}
@@ -91,7 +88,7 @@ const ModalOverlay = ({ isOpen, onClose, title, children, className = "" }) => {
               elevation-4 overflow-hidden
               ${className}
             `}
-            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-border bg-card">

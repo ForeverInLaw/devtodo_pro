@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import Button from '../../../components/ui/Button';
 
 const TaskContent = ({ task, onTaskUpdate }) => {
@@ -23,14 +25,6 @@ const TaskContent = ({ task, onTaskUpdate }) => {
     setShowPreview(false);
   };
 
-  const renderMarkdown = (text) => {
-    // Simple markdown rendering for demo
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm">$1</code>')
-      .replace(/\n/g, '<br>');
-  };
 
   return (
     <div className="bg-card rounded-lg p-6 elevation-1">
@@ -83,13 +77,10 @@ const TaskContent = ({ task, onTaskUpdate }) => {
       {isEditing ? (
         <div className="space-y-4">
           {showPreview ? (
-            <div className="min-h-32 p-4 bg-muted rounded-md border border-border">
-              <div 
-                className="prose prose-sm max-w-none text-foreground"
-                dangerouslySetInnerHTML={{ 
-                  __html: renderMarkdown(editedDescription) 
-                }}
-              />
+            <div className="min-h-32 p-4 bg-muted rounded-md border border-border prose prose-sm max-w-none text-foreground">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                {editedDescription}
+              </ReactMarkdown>
             </div>
           ) : (
             <textarea
@@ -107,11 +98,9 @@ const TaskContent = ({ task, onTaskUpdate }) => {
       ) : (
         <div className="prose prose-sm max-w-none text-foreground">
           {task.description ? (
-            <div 
-              dangerouslySetInnerHTML={{ 
-                __html: renderMarkdown(task.description) 
-              }}
-            />
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+              {task.description}
+            </ReactMarkdown>
           ) : (
             <p className="text-muted-foreground italic">No description provided</p>
           )}

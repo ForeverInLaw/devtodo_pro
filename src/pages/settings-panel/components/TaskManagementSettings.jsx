@@ -105,7 +105,7 @@ const TaskManagementSettings = () => {
           </label>
           <Select
             value={settings.defaultPriority}
-            onValueChange={(value) => updateSetting('defaultPriority', value)}
+            onChange={(value) => updateSetting('defaultPriority', value)}
             options={priorityOptions}
           />
         </div>
@@ -137,7 +137,7 @@ const TaskManagementSettings = () => {
           </label>
           <Select
             value={settings.taskGrouping}
-            onValueChange={(value) => updateSetting('taskGrouping', value)}
+            onChange={(value) => updateSetting('taskGrouping', value)}
             options={groupingOptions}
           />
         </div>
@@ -236,7 +236,7 @@ const TaskManagementSettings = () => {
                   />
                   <Select
                     value={rule.category}
-                    onValueChange={(value) => updateRule(index, 'category', value)}
+                    onChange={(value) => updateRule(index, 'category', value)}
                     options={categoryOptions}
                     className="w-32"
                   />

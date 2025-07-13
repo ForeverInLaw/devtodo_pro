@@ -19,15 +19,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <form onSubmit={handleLogin} className="w-full max-w-sm p-8 bg-white rounded shadow-md">
-        <h2 className="text-2xl font-bold mb-4">Login</h2>
+    <div className="flex justify-center items-center h-screen bg-[#0a0a0a]">
+      <form onSubmit={handleLogin} className="w-full max-w-sm p-8 rounded shadow-md bg-[#202020]">
+        <h2 className="text-2xl font-bold mb-4 text-white">Login</h2>
         <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+          <label className="block text-white text-sm font-bold mb-2" htmlFor="email">
             Email
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow appearance-none border rounded w-full py-2 px-3 bg-[#333333] border-[#555555] text-white leading-tight focus:outline-none focus:ring-2 focus:ring-[#777777] placeholder-gray-400"
             id="email"
             type="email"
             placeholder="Email"
@@ -36,11 +36,11 @@ export default function LoginPage() {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+          <label className="block text-white text-sm font-bold mb-2" htmlFor="password">
             Password
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow appearance-none border rounded w-full py-2 px-3 bg-[#333333] border-[#555555] text-white mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-[#777777] placeholder-gray-400"
             id="password"
             type="password"
             placeholder="******************"
@@ -50,16 +50,16 @@ export default function LoginPage() {
         </div>
         <div className="flex items-center justify-between">
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="bg-white hover:bg-gray-200 text-black font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
             type="submit"
           >
             Sign In
           </button>
         </div>
         <div className="text-center mt-4">
-          <p className="text-sm">
+          <p className="text-sm text-white">
             Don't have an account?{' '}
-            <Link to="/signup" className="font-bold text-blue-500 hover:text-blue-800">
+            <Link to="/signup" className="font-bold text-gray-400 hover:text-gray-200">
               Sign up
             </Link>
           </p>

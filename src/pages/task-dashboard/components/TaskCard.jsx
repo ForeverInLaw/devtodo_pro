@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 
@@ -167,9 +170,15 @@ const TaskCard = ({
             </h3>
             
             {task.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {task.description}
-              </p>
+              <div className="text-sm text-muted-foreground line-clamp-2 prose prose-sm max-w-none">
+                {Array.isArray(task.description) ? (
+                  <div>{task.description}</div>
+                ) : (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                    {task.description}
+                  </ReactMarkdown>
+                )}
+              </div>
             )}
           </div>
 
@@ -230,9 +239,15 @@ const TaskCard = ({
             <div className="px-3 pb-3">
               <div className="border-t border-border pt-3 mt-3">
                 {task.description && (
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {task.description}
-                  </p>
+                  <div className="text-sm text-muted-foreground mb-3 prose prose-sm max-w-none">
+                    {Array.isArray(task.description) ? (
+                      <div>{task.description}</div>
+                    ) : (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                        {task.description}
+                      </ReactMarkdown>
+                    )}
+                  </div>
                 )}
                 <div className="flex flex-wrap items-center gap-3 text-xs">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full font-medium ${getCategoryColor(task.category)}`}>

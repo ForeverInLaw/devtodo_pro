@@ -60,7 +60,6 @@ const ThemeSettings = () => {
       title="Theme Preferences"
       description="Customize the visual appearance of your workspace"
       icon="Palette"
-      defaultExpanded={true}
     >
       <div className="space-y-6">
         {/* Theme Toggle */}

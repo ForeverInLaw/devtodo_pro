@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
+import { supabase } from '../../../lib/supabase';
 import SettingsSection from './SettingsSection';
 import Button from '../../../components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,17 +10,69 @@ const DataManagement = () => {
   const [showExportSuccess, setShowExportSuccess] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const fileInputRef = useRef(null);
+  const { user } = useAuth();
+
+  const [taskStats, setTaskStats] = useState({ total: 0, completed: 0, active: 0 });
+  const [storageUsage, setStorageUsage] = useState('0.00');
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const fetchTaskStats = async () => {
+      if (!user) return;
+
+      setIsLoadingStats(true);
+
+      const { data, error, count } = await supabase
+        .from('tasks')
+        .select('id, completed', { count: 'exact', head: false })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error fetching task stats:', error);
+        setTaskStats({ total: 0, completed: 0, active: 0 });
+        setIsLoadingStats(false);
+        return;
+      }
+
+      const completedCount = data.filter(task => task.completed).length;
+      const totalCount = count || data.length;
+
+      setTaskStats({
+        total: totalCount,
+        completed: completedCount,
+        active: totalCount - completedCount,
+      });
+
+      const estimatedSize = (JSON.stringify(data).length / 1024).toFixed(2);
+      setStorageUsage(estimatedSize);
+
+      setIsLoadingStats(false);
+    };
+
+    fetchTaskStats();
+  }, [user]);
 
   const handleExportData = async () => {
+    if (!user) return;
     setIsExporting(true);
-    
-    // Simulate export process
-    setTimeout(() => {
-      // Gather all data from localStorage
+
+    try {
+      // Fetch all tasks from Supabase
+      const { data: tasks, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Gather all data
       const exportData = {
-        tasks: JSON.parse(localStorage.getItem('tasks') || '[]'),
+        tasks: tasks || [],
         settings: {
-          theme: localStorage.getItem('theme'),
+          theme: localStorage.getItem('theme') || 'light',
           notificationSettings: JSON.parse(localStorage.getItem('notificationSettings') || '{}'),
           taskManagementSettings: JSON.parse(localStorage.getItem('taskManagementSettings') || '{}'),
           keyboardShortcuts: JSON.parse(localStorage.getItem('keyboardShortcuts') || '{}'),
@@ -41,89 +95,137 @@ const DataManagement = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setIsExporting(false);
       setShowExportSuccess(true);
       setTimeout(() => setShowExportSuccess(false), 3000);
-    }, 2000);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('Failed to export data. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleClearCompleted = async () => {
+    if (!user) return;
     setIsClearing(true);
-    
-    // Simulate clearing process
-    setTimeout(() => {
-      const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-      const activeTasks = tasks?.filter(task => !task.completed);
-      localStorage.setItem('tasks', JSON.stringify(activeTasks));
-      
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('completed', true);
+
+      if (error) throw error;
+
+      // Refetch stats after clearing
+      const { data, count } = await supabase
+        .from('tasks')
+        .select('id, completed', { count: 'exact', head: false })
+        .eq('user_id', user.id);
+
+      const completedCount = data.filter(task => task.completed).length;
+      const totalCount = count || data.length;
+
+      setTaskStats({
+        total: totalCount,
+        completed: completedCount,
+        active: totalCount - completedCount,
+      });
+
+    } catch (error) {
+      console.error('Error clearing completed tasks:', error);
+      alert('Failed to clear completed tasks.');
+    } finally {
       setIsClearing(false);
       setShowClearConfirm(false);
-    }, 1000);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleImportData = (event) => {
+    if (!user) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const importData = JSON.parse(e.target?.result);
         
-        // Validate import data structure
-        if (importData.tasks && importData.settings) {
-          // Restore tasks
-          localStorage.setItem('tasks', JSON.stringify(importData.tasks));
-          
-          // Restore settings
-          if (importData.settings.theme) {
-            localStorage.setItem('theme', importData.settings.theme);
+        if (importData.tasks && Array.isArray(importData.tasks) && importData.settings) {
+          // Get user's projects
+          let { data: projects, error: projectsError } = await supabase
+            .from('projects')
+            .select('id')
+            .eq('user_id', user.id);
+
+          if (projectsError) throw projectsError;
+
+          let defaultProjectId;
+          if (projects.length === 0) {
+            // Create a default project if none exist
+            const { data: newProject, error: newProjectError } = await supabase
+              .from('projects')
+              .insert({ name: 'Imported Project', user_id: user.id })
+              .select('id')
+              .single();
+            if (newProjectError) throw newProjectError;
+            defaultProjectId = newProject.id;
+            projects = [{ id: defaultProjectId }];
+          } else {
+            defaultProjectId = projects[0].id;
           }
-          if (importData.settings.notificationSettings) {
-            localStorage.setItem('notificationSettings', JSON.stringify(importData.settings.notificationSettings));
+
+          const validProjectIds = new Set(projects.map(p => p.id));
+
+          // Restore tasks to Supabase, ensuring only valid columns are inserted
+          const tasksToInsert = importData.tasks.map((task, index) => {
+            const sanitizedTask = {
+              user_id: user.id,
+              project_id: validProjectIds.has(task.project_id) ? task.project_id : defaultProjectId,
+              title: task.title,
+              description: task.description,
+              category: task.category,
+              status: task.status,
+              priority: task.priority,
+              due_date: task.due_date,
+              completed: task.completed,
+              position: task.position ?? index,
+            };
+            // Remove any keys with undefined values to avoid DB errors
+            Object.keys(sanitizedTask).forEach(key => sanitizedTask[key] === undefined && delete sanitizedTask[key]);
+            return sanitizedTask;
+          });
+
+          if (tasksToInsert.length > 0) {
+            const { error } = await supabase.from('tasks').insert(tasksToInsert);
+            if (error) throw error;
           }
-          if (importData.settings.taskManagementSettings) {
-            localStorage.setItem('taskManagementSettings', JSON.stringify(importData.settings.taskManagementSettings));
-          }
-          if (importData.settings.keyboardShortcuts) {
-            localStorage.setItem('keyboardShortcuts', JSON.stringify(importData.settings.keyboardShortcuts));
-          }
-          if (importData.settings.categorizationRules) {
-            localStorage.setItem('categorizationRules', JSON.stringify(importData.settings.categorizationRules));
-          }
+
+          // Restore settings to localStorage
+          Object.keys(importData.settings).forEach(key => {
+            const value = importData.settings[key];
+            localStorage.setItem(key, typeof value === 'object' ? JSON.stringify(value) : value);
+          });
           
           alert('Data imported successfully! Please refresh the page to see changes.');
+          window.location.reload();
         } else {
           throw new Error('Invalid file format');
         }
       } catch (error) {
-        alert('Error importing data: Invalid file format');
+        console.error('Error importing data:', error);
+        alert('Error importing data: Invalid file format or database error.');
       }
     };
     reader.readAsText(file);
     
-    // Reset file input
     event.target.value = '';
   };
 
-  const getStorageUsage = () => {
-    let totalSize = 0;
-    for (let key in localStorage) {
-      if (localStorage.hasOwnProperty(key)) {
-        totalSize += localStorage[key].length + key.length;
-      }
-    }
-    return (totalSize / 1024).toFixed(2); // KB
-  };
-
-  const getTaskCount = () => {
-    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-    const completed = tasks?.filter(task => task.completed).length || 0;
-    const total = tasks?.length || 0;
-    return { total, completed, active: total - completed };
-  };
-
-  const taskStats = getTaskCount();
 
   return (
     <SettingsSection
@@ -138,19 +240,19 @@ const DataManagement = () => {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Total Tasks:</span>
-              <span className="ml-2 font-medium">{taskStats.total}</span>
+              <span className="ml-2 font-medium">{isLoadingStats ? '...' : taskStats.total}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Active Tasks:</span>
-              <span className="ml-2 font-medium">{taskStats.active}</span>
+              <span className="ml-2 font-medium">{isLoadingStats ? '...' : taskStats.active}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Completed:</span>
-              <span className="ml-2 font-medium">{taskStats.completed}</span>
+              <span className="ml-2 font-medium">{isLoadingStats ? '...' : taskStats.completed}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Storage Used:</span>
-              <span className="ml-2 font-medium">{getStorageUsage()} KB</span>
+              <span className="ml-2 font-medium">{isLoadingStats ? '...' : `${storageUsage} KB`}</span>
             </div>
           </div>
         </div>
@@ -191,22 +293,21 @@ const DataManagement = () => {
           <p className="text-xs text-muted-foreground mb-3">
             Restore data from a previous backup file
           </p>
-          <label className="cursor-pointer">
-            <Button
-              variant="outline"
-              size="sm"
-              iconName="Upload"
-              asChild
-            >
-              Import Backup File
-            </Button>
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleImportData}
-              className="hidden"
-            />
-          </label>
+          <Button
+            onClick={handleImportClick}
+            variant="outline"
+            size="sm"
+            iconName="Upload"
+          >
+            Import Backup File
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImportData}
+            className="hidden"
+          />
         </div>
 
         {/* Clear Completed Tasks */}
@@ -267,10 +368,13 @@ const DataManagement = () => {
                 const keysToRemove = [
                   'theme', 'notificationSettings', 'taskManagementSettings',
                   'keyboardShortcuts', 'categorizationRules', 'accentColor',
-                  'animationSpeed', 'reminderTiming', 'digestFrequency'
+                  'animationSpeed', 'reminderTiming', 'digestFrequency',
+                  'taskDashboard_viewMode', 'taskDashboard_sortBy', 'taskDashboard_filtersCollapsed',
+                  'taskDashboard_selectedProject'
                 ];
                 keysToRemove.forEach(key => localStorage.removeItem(key));
-                alert('Settings reset successfully! Please refresh the page.');
+                alert('Settings reset successfully! The page will now refresh.');
+                window.location.reload();
               }
             }}
             variant="outline"
@@ -288,12 +392,23 @@ const DataManagement = () => {
             Irreversible actions that will delete all data
           </p>
           <Button
-            onClick={() => {
+            onClick={async () => {
               if (window.confirm('DELETE ALL DATA? This cannot be undone!')) {
                 if (window.confirm('Are you absolutely sure? All tasks and settings will be lost forever!')) {
-                  localStorage.clear();
-                  alert('All data cleared. The page will now refresh.');
-                  window.location.reload();
+                  try {
+                    // Delete all tasks from Supabase
+                    const { error } = await supabase.from('tasks').delete().eq('user_id', user.id);
+                    if (error) throw error;
+
+                    // Clear all localStorage
+                    localStorage.clear();
+                    
+                    alert('All data cleared. The page will now refresh.');
+                    window.location.reload();
+                  } catch (error) {
+                    console.error('Error clearing all data:', error);
+                    alert('Failed to clear all data. Please try again.');
+                  }
                 }
               }
             }}

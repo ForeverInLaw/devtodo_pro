@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import TaskCard from './TaskCard';
 import Icon from '../../../components/AppIcon';
 
@@ -169,9 +172,18 @@ const TaskGrid = ({
                   </div>
                   
                   {task.description && (
-                    <p className="text-sm text-muted-foreground mt-1 truncate">
-                      {highlightSearchTerm(task.description, searchQuery)}
-                    </p>
+                    <div className="text-sm text-muted-foreground mt-1 prose prose-sm max-w-none line-clamp-2">
+                      {searchQuery ? (
+                        highlightSearchTerm(task.description, searchQuery)
+                      ) : (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeSanitize]}
+                        >
+                          {task.description}
+                        </ReactMarkdown>
+                      )}
+                    </div>
                   )}
                 </div>
 
