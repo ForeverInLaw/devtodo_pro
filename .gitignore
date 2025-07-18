@@ -7,4 +7,4 @@ package-lock.json
 .idea/
 vite.config.*s.*
 .env
-
+.roo/
