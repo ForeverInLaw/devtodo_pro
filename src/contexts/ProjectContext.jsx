@@ -14,30 +14,37 @@ export const ProjectProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchProjects = async () => {
-      if (user && projects.length === 0) {
-        setIsLoading(true);
-        const { data: projectData, error: projectError } = await supabase
-          .from('projects')
-          .select('id, name')
-          .order('created_at', { ascending: true });
-
-        if (projectError) {
-          console.error('Error fetching projects:', projectError);
-          setProjects([]);
-        } else {
-          setProjects(projectData);
-          const currentSelectedProject = localStorage.getItem('taskDashboard_selectedProject');
-          if (currentSelectedProject && projectData.find(p => p.id.toString() === currentSelectedProject)) {
-            setSelectedProject(currentSelectedProject);
-          } else if (projectData.length > 0) {
-            setSelectedProject(projectData[0].id);
-          }
-        }
+      if (!user) {
+        setProjects([]);
+        setSelectedProject(null);
         setIsLoading(false);
+        return;
       }
+
+      setIsLoading(true);
+      const { data: projectData, error: projectError } = await supabase
+        .from('projects')
+        .select('id, name')
+        .order('created_at', { ascending: true });
+
+      if (projectError) {
+        console.error('Error fetching projects:', projectError);
+        setProjects([]);
+      } else {
+        setProjects(projectData);
+        const currentSelectedProject = localStorage.getItem('taskDashboard_selectedProject');
+        if (currentSelectedProject && projectData.find(p => p.id.toString() === currentSelectedProject)) {
+          setSelectedProject(currentSelectedProject);
+        } else if (projectData.length > 0) {
+          setSelectedProject(projectData[0].id);
+        } else {
+          setSelectedProject(null);
+        }
+      }
+      setIsLoading(false);
     };
     fetchProjects();
-  }, [user, projects]);
+  }, [user]);
 
   useEffect(() => {
     if (selectedProject) {
