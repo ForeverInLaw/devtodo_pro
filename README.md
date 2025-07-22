@@ -9,16 +9,14 @@ A modern task management application built with React, Vite, Tailwind CSS, and S
 - **Backend & Auth**: **Supabase** for database, authentication, and auto-generated APIs.
 - **Styling**: **Tailwind CSS** for a utility-first CSS workflow, with `tailwind-merge` and `clsx` for class name management.
 - **Routing**: **React Router v6** for declarative client-side routing.
-- **State Management**: **Redux Toolkit** for efficient and predictable global state management.
-- **Form Handling**: **React Hook Form** for performant and flexible form validation.
+- **State Management**: React Context API for efficient and predictable global state management.
 - **Animations**: **Framer Motion** for creating smooth and beautiful UI animations.
 - **UI Components**: A rich set of reusable components, including custom UI elements built with Radix UI primitives.
-- **Data Visualization**: Integrated **D3.js** and **Recharts** for powerful data visualization capabilities.
 - **Real-time Collaboration**: Invite users to projects, manage roles, and see live updates.
 
 ## ✨ Changelog
 
-### Version 0.2.0 (2025-07-13)
+### Version 0.1.0 (2025-07-13)
 
 - **Feature: Real-time Collaboration**
   - Users can now create projects and invite other users to collaborate.
@@ -71,7 +69,7 @@ pnpm install
     VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
     ```
 
-    The other variables in the file are for optional service integrations.
+    These are the only required environment variables for this project.
 
 ### 4. Run the Development Server
 
@@ -81,7 +79,7 @@ Start the Vite development server:
 npm run start
 ```
 
-The application should now be running at `http://localhost:5173` (or another port if 5173 is in use).
+The application should now be running at `http://localhost:4028` (or another port if 4028 is in use).
 
 ## 📁 Project Structure
 
@@ -122,7 +120,7 @@ Deploying this application to Vercel is a straightforward process.
 
     - Vercel will automatically detect that you are using **Vite** and set the build configurations.
     - **Build Command**: Should be `vite build` or `npm run build`.
-    - **Output Directory**: Should be `dist`.
+    - **Output Directory**: Should be `build`.
     - **Install Command**: Should be `npm install`.
 
 4.  **Add Environment Variables**:
